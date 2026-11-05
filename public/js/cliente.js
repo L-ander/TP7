@@ -18,6 +18,8 @@ $(document).ready(function(){
 		}
 	});
 
+	
+
 	$('#id_ciudadEditar').change(function() {
 		var opcionSeleccionada = $(this).find('option:selected');
 		var municipio = opcionSeleccionada.data('municipio');
