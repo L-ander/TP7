@@ -115,6 +115,7 @@ class PedidoModel extends Conexion {
             return array('success' => false, 'validation' => true, 'error' => 'Selecciona una fecha válida para el pedido.');
         }
 
+        $cantidadesPorProducto = [];
         foreach ($this->detalle as $indice => $item) {
             $numeroItem = (int)$indice + 1;
             $cantidad = is_array($item) ? filter_var($item['cantidad'] ?? null, FILTER_VALIDATE_INT) : false;
@@ -125,6 +126,9 @@ class PedidoModel extends Conexion {
             if ($cantidad === false || $cantidad <= 0) {
                 return array('success' => false, 'validation' => true, 'error' => 'La cantidad del producto número ' . $numeroItem . ' debe ser un número entero mayor que cero.');
             }
+
+            $cantidadExistente = $cantidadesPorProducto[$idProducto] ?? 0;
+            $cantidadesPorProducto[$idProducto] = $cantidadExistente + $cantidad;
         }
 
         try {
@@ -153,8 +157,10 @@ class PedidoModel extends Conexion {
 
             $productosValidados = [];
             $buscarProducto = $conexion->prepare("SELECT precio FROM producto WHERE id = :id");
-            foreach ($this->detalle as $indice => $item) {
-                $idProducto = (int)$item['id_producto'];
+            $numeroProducto = 0;
+            foreach ($cantidadesPorProducto as $indice => $cantidad) {
+                $numeroProducto++;
+                $idProducto = (int)$indice;
                 $buscarProducto->bindValue(':id', $idProducto, PDO::PARAM_INT);
                 $buscarProducto->execute();
                 $precio = $buscarProducto->fetchColumn();
@@ -163,13 +169,13 @@ class PedidoModel extends Conexion {
                     return array(
                         'success' => false,
                         'validation' => true,
-                        'error' => 'El producto número ' . ((int)$indice + 1) . ' ya no está disponible. Actualiza la lista y vuelve a intentarlo.'
+                        'error' => 'El producto número ' . $numeroProducto . ' ya no está disponible. Actualiza la lista y vuelve a intentarlo.'
                     );
                 }
 
                 $productosValidados[] = [
                     'id_producto' => $idProducto,
-                    'cantidad' => (int)$item['cantidad'],
+                    'cantidad' => $cantidad,
                     'precio_unitario' => (float)$precio
                 ];
             }
