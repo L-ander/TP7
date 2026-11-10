@@ -10,19 +10,17 @@ $(function() {
     listarPedidos();
 
     $('#btnNuevoPedido').on('click', nuevoPedido);
-    $('#btnGuardarPedido').on('click', guardarPedido);
-    $('#btnAgregarItem').on('click', agregarItem);
+    $('#btnAgregarItem').on('click', function() {
+        var productoValido = $('#id_producto').valid();
+        var cantidadValida = $('#cantidad').valid();
+
+        if (productoValido && cantidadValida) {
+            agregarItem();
+        }
+    });
     $('#id_producto').on('change', function() {
         actualizarPrecio();
-        actualizarEstadoAgregar();
     });
-    $('#cantidad').on('input', function() {
-        validarCantidad(false);
-    });
-    $('#cantidad').on('blur', function() {
-        validarCantidad(true);
-    });
-    actualizarEstadoAgregar();
 
     $('#tablaPedidos').on('click', '.js-editar-pedido', function() {
         editarPedido($(this).data('id'));
@@ -42,17 +40,22 @@ function escaparHtml(valor) {
     return $('<div>').text(valor === null || valor === undefined ? '' : valor).html();
 }
 
-function mostrarErrorPedido(mensaje) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: mensaje || 'No se pudo completar la operación.'
+function mostrarToastErrorPedido(mensaje) {
+    showToast.error(mensaje || 'No se pudo completar la operación.', {
+        position: 'top-right',
+        duration: 4000
     });
 }
 
 function mostrarErrorAjax(xhr, mensaje) {
     var respuesta = xhr.responseJSON || {};
-    mostrarErrorPedido(respuesta.message || mensaje);
+    mostrarToastErrorPedido(respuesta.message || mensaje);
+}
+
+function mostrarErrorValidacionPedido(campo, mensaje) {
+    var errores = {};
+    errores[campo] = mensaje;
+    $('#formPedido').validate().showErrors(errores);
 }
 
 function cargarClientes() {
@@ -63,7 +66,7 @@ function cargarClientes() {
         data: { action: 'clientes' }
     }).done(function(respuesta) {
         if (!respuesta.success) {
-            mostrarErrorPedido(respuesta.message || 'No se pudieron cargar los clientes.');
+            mostrarToastErrorPedido(respuesta.message || 'No se pudieron cargar los clientes.');
             return;
         }
 
@@ -86,7 +89,7 @@ function cargarVendedores() {
         data: { action: 'vendedores' }
     }).done(function(respuesta) {
         if (!respuesta.success) {
-            mostrarErrorPedido(respuesta.message || 'No se pudieron cargar los vendedores.');
+            mostrarToastErrorPedido(respuesta.message || 'No se pudieron cargar los vendedores.');
             return;
         }
 
@@ -109,7 +112,7 @@ function cargarProductos() {
         data: { action: 'productos' }
     }).done(function(respuesta) {
         if (!respuesta.success) {
-            mostrarErrorPedido(respuesta.message || 'No se pudieron cargar los productos.');
+            mostrarToastErrorPedido(respuesta.message || 'No se pudieron cargar los productos.');
             return;
         }
 
@@ -136,17 +139,13 @@ function listarPedidos() {
         data: { action: 'ordenes' }
     }).done(function(respuesta) {
         if (!respuesta.success) {
+            destruirTablaPedidos();
             $('#tablaPedidos tbody').html('<tr><td colspan="8">No se pudieron cargar los pedidos.</td></tr>');
-            mostrarErrorPedido(respuesta.message || 'No se pudieron cargar los pedidos.');
+            mostrarToastErrorPedido(respuesta.message || 'No se pudieron cargar los pedidos.');
             return;
         }
 
         pedidos = respuesta.data;
-        if (!pedidos.length) {
-            $('#tablaPedidos tbody').html('<tr><td colspan="8">No hay pedidos registrados.</td></tr>');
-            return;
-        }
-
         var filas = '';
         $.each(pedidos, function(indice, pedido) {
             var cambiarEstatus = Number(pedido.id_estatus) === 1
@@ -171,16 +170,46 @@ function listarPedidos() {
                 '</div></td>' +
                 '</tr>';
         });
+        destruirTablaPedidos();
         $('#tablaPedidos tbody').html(filas);
+        $('#tablaPedidos').DataTable({
+            pageLength: 20,
+            order: [[0, 'desc']],
+            language: {
+                emptyTable: 'No hay pedidos registrados.',
+                info: 'Mostrando _START_ a _END_ de _TOTAL_ pedidos',
+                infoEmpty: 'Mostrando 0 a 0 de 0 pedidos',
+                infoFiltered: '(filtrado de _MAX_ pedidos en total)',
+                lengthMenu: 'Mostrar _MENU_ pedidos',
+                loadingRecords: 'Cargando...',
+                processing: 'Procesando...',
+                search: 'Buscar:',
+                zeroRecords: 'No se encontraron pedidos coincidentes',
+                paginate: {
+                    first: 'Primero',
+                    last: 'Último',
+                    next: 'Siguiente',
+                    previous: 'Anterior'
+                }
+            }
+        });
     }).fail(function(xhr) {
+        destruirTablaPedidos();
         $('#tablaPedidos tbody').html('<tr><td colspan="8">No se pudieron cargar los pedidos.</td></tr>');
         mostrarErrorAjax(xhr, 'No se pudieron cargar los pedidos.');
     });
 }
 
+function destruirTablaPedidos() {
+    if ($.fn.DataTable.isDataTable('#tablaPedidos')) {
+        $('#tablaPedidos').DataTable().destroy();
+    }
+}
+
 function nuevoPedido() {
     $('#formPedido')[0].reset();
-    limpiarValidacionCantidad();
+    $('#formPedido').validate().resetForm();
+    $('#id_producto').rules('add', { required: true });
     $('#id_pedido').val('');
     $('#id_estatus').val('1');
     var hoy = new Date();
@@ -201,12 +230,13 @@ function editarPedido(id) {
     });
 
     if (!pedido) {
-        mostrarErrorPedido('No se encontró el pedido seleccionado. Actualiza la lista e inténtalo nuevamente.');
+        mostrarToastErrorPedido('No se encontró el pedido seleccionado. Actualiza la lista e inténtalo nuevamente.');
         return;
     }
 
     $('#formPedido')[0].reset();
-    limpiarValidacionCantidad();
+    $('#formPedido').validate().resetForm();
+    $('#id_producto').rules('remove', 'required');
     $('#id_pedido').val(pedido.id);
     $('#id_cliente').val(pedido.id_cliente);
     $('#id_vendedor').val(pedido.id_vendedor);
@@ -224,7 +254,7 @@ function editarPedido(id) {
         data: { action: 'detalle', id_pedido: id }
     }).done(function(respuesta) {
         if (!respuesta.success) {
-            mostrarErrorPedido(respuesta.message || 'No se pudo cargar el detalle del pedido.');
+            mostrarToastErrorPedido(respuesta.message || 'No se pudo cargar el detalle del pedido.');
             return;
         }
 
@@ -262,12 +292,7 @@ function agregarItem() {
     });
 
     if (!producto) {
-        mostrarErrorPedido('Selecciona un producto.');
-        return;
-    }
-    if (!validarCantidad(true)) {
-        mostrarErrorPedido('La cantidad debe ser un número entero mayor que cero.');
-        $('#cantidad').focus();
+        mostrarErrorValidacionPedido('id_producto', 'Selecciona un producto válido.');
         return;
     }
 
@@ -283,15 +308,16 @@ function agregarItem() {
     };
 
     if (!sumarProductoDetalle(productoDetalle)) {
-        mostrarErrorPedido('La cantidad total del producto no puede superar ' + cantidadMaxima + '.');
+        mostrarErrorValidacionPedido('cantidad', 'La cantidad total del producto no puede superar ' + cantidadMaxima + '.');
         return;
     }
 
-    $('#id_producto').val('');
     $('#cantidad').val('1');
-    validarCantidad(false);
-    $('#precio_unitario').val('');
     mostrarDetalle();
+    showToast.success('Producto agregado al pedido.', {
+        position: 'top-right',
+        duration: 2000
+    });
 }
 
 function sumarProductoDetalle(producto) {
@@ -322,44 +348,6 @@ function sumarProductoDetalle(producto) {
     return true;
 }
 
-function validarCantidad(mostrarErrorVacio) {
-    var valor = $('#cantidad').val();
-    var valida = Validaciones.numeroEnteroPositivo(valor);
-    var $linea = $('#cantidad').closest('.form-line');
-    var $error = $('#error-cantidad');
-
-    if (valida) {
-        $linea.css('border-bottom', '2px solid #4CAF50');
-        $error.hide();
-        actualizarEstadoAgregar();
-        return true;
-    }
-
-    if (valor === '' && !mostrarErrorVacio) {
-        $linea.css('border-bottom', '');
-        $error.hide();
-        actualizarEstadoAgregar();
-        return false;
-    }
-
-    $linea.css('border-bottom', '2px solid #F44336');
-    $error.show();
-    actualizarEstadoAgregar();
-    return false;
-}
-
-function actualizarEstadoAgregar() {
-    var productoSeleccionado = $('#id_producto').val() !== '';
-    var cantidadValida = Validaciones.numeroEnteroPositivo($('#cantidad').val());
-    $('#btnAgregarItem').prop('disabled', !productoSeleccionado || !cantidadValida);
-}
-
-function limpiarValidacionCantidad() {
-    $('#cantidad').closest('.form-line').css('border-bottom', '');
-    $('#error-cantidad').hide();
-    actualizarEstadoAgregar();
-}
-
 function mostrarDetalle() {
     if (!detallePedido.length) {
         $('#tablaDetallePedido').html('<tr><td colspan="5">Agrega productos al pedido.</td></tr>');
@@ -387,16 +375,6 @@ function eliminarItem(indice) {
 }
 
 function guardarPedido() {
-    var formulario = $('#formPedido')[0];
-    if (!formulario.checkValidity()) {
-        formulario.reportValidity();
-        return;
-    }
-    if (!detallePedido.length) {
-        mostrarErrorPedido('Agrega al menos un producto antes de guardar el pedido.');
-        return;
-    }
-
     $('#btnGuardarPedido').prop('disabled', true);
     $.ajax({
         url: 'app/controllers/PedidoController.php',
@@ -413,18 +391,15 @@ function guardarPedido() {
         }
     }).done(function(respuesta) {
         if (!respuesta.success) {
-            mostrarErrorPedido(respuesta.message || 'No se pudo guardar el pedido.');
+            mostrarToastErrorPedido(respuesta.message || 'No se pudo guardar el pedido.');
             return;
         }
 
         $('#modalPedido').modal('hide');
         listarPedidos();
-        Swal.fire({
-            icon: 'success',
-            title: '¡Excelente!',
-            text: respuesta.message || 'Pedido guardado correctamente.',
-            showConfirmButton: false,
-            timer: 2000
+        showToast.success(respuesta.message || 'Pedido guardado correctamente.', {
+            position: 'top-right',
+            duration: 2000
         });
     }).fail(function(xhr) {
         mostrarErrorAjax(xhr, 'No se pudo guardar el pedido.');
@@ -453,11 +428,14 @@ function eliminarPedido(id) {
             data: { action: 'eliminar', id: id }
         }).done(function(respuesta) {
             if (!respuesta.success) {
-                mostrarErrorPedido(respuesta.message || 'No se pudo eliminar el pedido.');
+                mostrarToastErrorPedido(respuesta.message || 'No se pudo eliminar el pedido.');
                 return;
             }
             listarPedidos();
-            Swal.fire('Eliminado', respuesta.message || 'Pedido eliminado correctamente.', 'success');
+            showToast.success(respuesta.message || 'Pedido eliminado correctamente.', {
+                position: 'top-right',
+                duration: 2000
+            });
         }).fail(function(xhr) {
             mostrarErrorAjax(xhr, 'No se pudo eliminar el pedido.');
         });
@@ -492,11 +470,14 @@ function cambiarEstatusPedido(id) {
             }
         }).done(function(respuesta) {
             if (!respuesta.success) {
-                mostrarErrorPedido(respuesta.message || 'No se pudo cambiar el estatus.');
+                mostrarToastErrorPedido(respuesta.message || 'No se pudo cambiar el estatus.');
                 return;
             }
             listarPedidos();
-            Swal.fire('Actualizado', respuesta.message || 'Estatus actualizado correctamente.', 'success');
+            showToast.success(respuesta.message || 'Estatus actualizado correctamente.', {
+                position: 'top-right',
+                duration: 2000
+            });
         }).fail(function(xhr) {
             mostrarErrorAjax(xhr, 'No se pudo cambiar el estatus.');
         });

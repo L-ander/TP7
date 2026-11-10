@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-  $database = $_SESSION['database'] ?? getenv('DB_NAME') ?: 'prueba';
+  $database = $_SESSION['database'] ?? getenv('DB_NAME') ?: 'pruebas';
   $host = getenv('DB_HOST') ?: '127.0.0.1';
   $port = getenv('DB_PORT') ?: '3306';
   $username = getenv('DB_USER') ?: 'root';
