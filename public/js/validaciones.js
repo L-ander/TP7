@@ -43,6 +43,7 @@ function toggleError(input, isValid, errorId) {
         $(input).removeClass('input-success').addClass('input-error');
         $('#' + errorId).slideDown(200);
     }
+
 }
 
 if (typeof jQuery !== 'undefined' &&

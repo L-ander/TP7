@@ -10,7 +10,188 @@ $(document).ready(function() {
             $('a[href="' + pestaña + '"]').tab('show');
         }
     }
+
+
+
+
+var formularioProducto = $('#formulario');
+formularioProducto.validate({
+        rules: {
+            nombre: {
+                required: true,
+                maxlength: 40
+            },
+            id_linea: {
+                required: true
+            },
+            presentacion: {
+                required: true
+            },
+            id_medida: {
+                required: true
+            },
+            precio: {
+                required: true,
+                number: true,
+                min: 0
+            }
+        },
+        messages: {
+            nombre: {
+                required: 'El campo nombre del producto no puede estar vacío.',
+                maxlength: 'El nombre es demasiado largo.'
+            },
+            id_linea: {
+                required: 'Debe seleccionar una línea de producto.'
+            },
+            presentacion: {
+                required: 'Debe seleccionar una presentación.'
+            },
+            id_medida: {
+                required: 'Debe seleccionar una unidad de medida.'
+            },
+            precio: {
+                required: 'El precio del producto no puede estar vacío.',
+                number: 'Ingrese un número válido.',
+                min: 'El precio no puede ser un número negativo.'
+            }
+        },
+        errorElement: 'small',
+        errorClass: 'txt-error',
+        highlight: function(element) {
+            var linea = $(element).closest('.form-line');
+            if (linea.length === 0) {
+                linea = $(element).closest('.input-group').find('.form-line');
+            }
+            linea.css('border-bottom', '2px solid #F44336');
+        },
+        unhighlight: function(element) {
+            var linea = $(element).closest('.form-line');
+            if (linea.length === 0) {
+                linea = $(element).closest('.input-group').find('.form-line');
+            }
+            linea.css('border-bottom', '2px solid #4CAF50');
+        },
+        errorPlacement: function(error, element) {
+            error.css({
+                color: '#F44336',
+                display: 'block',
+                marginTop: '5px'
+            });
+            var linea = element.closest('.form-line');
+            if (linea.length === 0) {
+                linea = element.closest('.input-group').find('.form-line');
+            }
+            error.insertAfter(linea);
+        },
+        submitHandler: function(form) {
+            crear();
+        }
+    });
+
+    var formularioEditarProducto = $('#modalEditarProducto form');
+    formularioEditarProducto.validate({
+        rules: {
+            nombre: {
+                required: true,
+                maxlength: 40
+            },
+            id_linea: {
+                required: true
+            },
+            presentacion: {
+                required: true
+            },
+            id_medida: {
+                required: true
+            },
+            precio: {
+                required: true,
+                number: true,
+                min: 0
+            }
+        },
+        messages: {
+            nombre: {
+                required: 'El campo nombre del producto no puede estar vacío.' , 
+                maxlength: 'El nombre es demasiado largo.'
+            },
+            id_linea: {
+                required: 'Debe seleccionar una línea de producto.'
+            },
+            presentacion: {
+                required: 'Debe seleccionar una presentación.'
+            },
+            id_medida: {
+                required: 'Debe seleccionar una unidad de medida.'
+            },
+            precio: {
+                required: 'El precio del producto no puede estar vacío.',
+                number: 'Ingrese un número válido.',
+                min: 'El precio no puede ser negativo.'
+            }
+        },
+        errorElement: 'small',
+        errorClass: 'txt-error',
+        highlight: function(element) {
+            var linea = $(element).closest('.form-line');
+            if (linea.length === 0) {
+                linea = $(element).closest('.input-group').find('.form-line');
+            }
+            linea.css('border-bottom', '2px solid #F44336');
+        },
+        unhighlight: function(element) {
+            var linea = $(element).closest('.form-line');
+            if (linea.length === 0) {
+                linea = $(element).closest('.input-group').find('.form-line');
+            }
+            linea.css('border-bottom', '2px solid #4CAF50');
+        },
+        errorPlacement: function(error, element) {
+            error.css({
+                color: '#F44336',
+                display: 'block',
+                marginTop: '5px'
+            });
+            var linea = element.closest('.form-line');
+            if (linea.length === 0) {
+                linea = element.closest('.input-group').find('.form-line');
+            }
+            error.insertAfter(linea);
+        },
+        submitHandler: function(form) {
+            editar();
+        }
+    });
+
+    $('#modalProducto').on('hidden.bs.modal', function() {
+        var formulario = $(this).find('form');
+        var validador = formulario.data('validator');
+
+        if (validador) {
+            validador.resetForm();
+        }
+
+        formulario.find('.txt-error').remove();
+        formulario.find('.form-line').css('border-bottom', '');
+    });
+
+    $('#modalEditarProducto').on('hidden.bs.modal', function() {
+        var formulario = $(this).find('form');
+        var validador = formulario.data('validator');
+
+        if (validador) {
+            validador.resetForm();
+        }
+
+        formulario.find('.txt-error').remove();
+        formulario.find('.form-line').css('border-bottom', '');
+    });
+
 });
+
+
+
 
 // -------------------------------------------------------------------------------------------------
 // listar
@@ -63,14 +244,19 @@ function listar() {
 //animacion guardar
 
 function mostrarExitoProducto(mensaje) {
-    Swal.fire({
-        icon: 'success',
-        title: '¡Excelente!',
+    $.toast({
+        heading: 'Éxito',
         text: mensaje,
-        showConfirmButton: false,
-        timer: 2000
+        showHideTransition: 'slide',
+        icon: 'success',
+        position: 'top-right',
+        bgColor: '#6ad86a',
+        textColor: '#ffffff'
     });
 }
+
+
+
 
 
 //animacion eliminar
@@ -93,12 +279,14 @@ function confirmarEliminacion(id, nombreProducto) {
 }
 
 function mostrarErrorProducto(mensaje) {
-    Swal.fire({
-        icon: 'error',
-        title: '¡Ops!',
+    $.toast({
+        heading: 'Error',
         text: mensaje,
-        confirmButtonColor: '#d33',
-        confirmButtonText: 'Entendido'
+        showHideTransition: 'slide',
+        icon: 'error',
+        position: 'top-right',
+        bgColor: '#e74d4d',
+        textColor: '#fffdfd'
     });
 }
 
@@ -108,6 +296,11 @@ function mostrarErrorProducto(mensaje) {
 // crear
 // -------------------------------------------------------------------------------------------------
 $('#guardar').on('click', function() {
+    if (!$('#formulario').valid()) {
+        mostrarErrorProducto('Completa todos los campos solicitados.');
+        return;
+    }
+
     crear();
 });
 
@@ -118,38 +311,8 @@ function crear() {
     var id_medida = $('#id_medida').val();
     var precio = $('#precio').val().trim();
 
-    if (nombre === '') {
-        mostrarErrorProducto('El campo nombre del producto no puede estar vacío.');
-        $('#nombre').focus();
-        return;
-    }
-    if (id_linea === '') {
-        mostrarErrorProducto('Debe seleccionar una línea de producto.');
-        $('#id_linea').focus();
-        return;
-    }
-    if (presentacion === '') {
-        mostrarErrorProducto('Debe seleccionar una presentación.');
-        $('#presentacion').focus();
-        return;
-    }
-    if (id_medida === '') {
-        mostrarErrorProducto('Debe seleccionar una unidad de medida.');
-        $('#id_medida').focus();
-        return;
-    }
-    if (precio === '') {
-        mostrarErrorProducto('El precio del producto no puede estar vacío.');
-        $('#precio').focus();
-        return;
-    }
+   
 
-    var precioNum = parseFloat(precio);
-    if (isNaN(precioNum) || precioNum < 0) {
-        mostrarErrorProducto('El precio no puede ser un número negativo ni contener caracteres inválidos.');
-        $('#precio').focus();
-        return;
-    }
 
     $.ajax({
         url: 'app/controllers/ProductoController.php',
@@ -292,6 +455,11 @@ $(document).on('click', 'button.boton-update', function() {
 });
 
 $('#editar').on('click', function() {
+    if (!$('#modalEditarProducto form').valid()) {
+        mostrarErrorProducto('Completa todos los campos solicitados.');
+        return;
+    }
+
     editar();
 });
 
@@ -362,70 +530,3 @@ function eliminar(id) {
     });
 }
 
-
-function validarInput(selector, patron, mensaje) {
-
-    $(document).off('input.validacion', selector);
-
-    $(document).on('input.validacion', selector, function () {
-
-        var input = $(this);
-        var valor = input.val();
-        var linea = input.closest('.form-line');
-
-        // Buscar el mensaje asociado a esta línea
-        var error = linea.next('.txt-error');
-
-        // Si el campo es válido, quitar el error
-        if (patron.test(valor) || valor === "") {
-
-            linea.css("border-bottom", "2px solid #4CAF50");
-
-            error.remove();
-
-        } else {
-
-            // Marcar el campo en rojo
-            linea.css("border-bottom", "2px solid #F44336");
-
-            // Crear el mensaje solamente si no existe
-            if (error.length === 0) {
-
-                $('<small>')
-                    .addClass('txt-error')
-                    .css({
-                        color: '#F44336',
-                        display: 'block',
-                        marginTop: '5px'
-                    })
-                    .text(mensaje)
-                    .insertAfter(linea);
-
-            } else {
-
-                // Actualizar el mensaje existente sin crear otro
-                error.text(mensaje);
-            }
-        }
-    });
-}
-
-$(document).ready(function () {
-
-    var patronTexto = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,/_-]*$/;
-
-    var patronPrecio = /^[0-9.]*$/;
-
-    validarInput(
-        '#nombre, #nombreEditar',
-        patronTexto,
-        'Solo letras, números y signos permitidos.'
-    );
-
-    validarInput(
-        '#precio, #precioEditar',
-        patronPrecio,
-        'Ingrese un precio válido.'
-    );
-
-});

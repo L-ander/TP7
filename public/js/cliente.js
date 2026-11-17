@@ -1,8 +1,140 @@
+function toast(icon, title) {
+	$.toast({
+		heading: icon === 'success' ? 'Éxito' : 'Error',
+		text: title,
+		showHideTransition: 'slide',
+		icon: icon,
+		position: 'top-right',
+		bgColor: icon === 'success' ? '#6ad86a' : '#e74d4d',
+		textColor: '#ffffff'
+	});
+}
+
+var clienteGuardando = false;
+var clienteEditando = false;
+
 $(document).ready(function(){
-
 	listar();
-
 	cargarCiudades();
+
+	if (!$.validator.methods.clienteNombre) {
+		$.validator.addMethod('clienteNombre', function(value, element) {
+			return this.optional(element) || /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u.test($.trim(value));
+		}, 'Use solo letras y espacios.');
+	}
+
+	function validacionCliente(selector, esEdicion) {
+		$(selector).validate({
+			rules: {
+				cedula: {
+					required: true,
+					digits: true,
+					minlength: 5,
+					maxlength: 20,
+					remote: {
+						url: 'app/controllers/ClienteController.php',
+						type: 'POST',
+						data: {
+							action: function() { return 'validarCedula'; },
+							id: function() { return $(selector).find('#idEditar').val() || 0; }
+						},
+						dataFilter: function(response) {
+							return JSON.parse(response).success ? 'true' : 'false';
+						}
+					}
+				},
+				nombre: {
+					required: true,
+					clienteNombre: true,
+					normalizer: function(value) { return $.trim(value); }
+				},
+				apellido: {
+					required: true,
+					clienteNombre: true,
+					normalizer: function(value) { return $.trim(value); }
+				},
+				sexo: { required: true },
+				id_ciudad: { required: true },
+				direccion: {
+					required: true,
+					maxlength: 100,
+					normalizer: function(value) { return $.trim(value); }
+				}
+			},
+			messages: {
+				cedula: {
+					required: 'La cédula es obligatoria.',
+					digits: 'La cédula solo debe contener números.',
+					minlength: 'La cédula debe contener entre 5 y 20 números.',
+					maxlength: 'La cédula debe contener entre 5 y 20 números.',
+					remote: 'La cédula ya está registrada.'
+				},
+				nombre: {
+					required: 'El nombre es obligatorio.',
+					clienteNombre: 'El nombre solo debe contener letras y espacios.'
+				},
+				apellido: {
+					required: 'El apellido es obligatorio.',
+					clienteNombre: 'El apellido solo debe contener letras y espacios.'
+				},
+				sexo: { required: 'Selecciona el sexo.' },
+				id_ciudad: { required: 'Selecciona una ciudad.' },
+				direccion: {
+					required: 'La dirección es obligatoria.',
+					maxlength: 'La dirección no debe exceder los 100 caracteres.'
+				}
+			},
+			errorElement: 'small',
+			errorClass: 'txt-error',
+			highlight: function(element) {
+				$(element).removeClass('cliente-input-success').addClass('cliente-input-error');
+				$(element).closest('.form-line').css('border-bottom', '2px solid #F44336');
+			},
+			unhighlight: function(element) {
+				$(element).removeClass('cliente-input-error').addClass('cliente-input-success');
+				$(element).closest('.form-line').css('border-bottom', '2px solid #4CAF50');
+			},
+			errorPlacement: function(error, element) {
+				error.css({
+					color: '#F44336',
+					display: 'block',
+					marginTop: '5px'
+				});
+				var $linea = element.closest('.form-line');
+				error.insertAfter($linea.length ? $linea : element);
+			},
+			invalidHandler: function() {
+				toast('error', 'Completa los campos solicitados.');
+			},
+			submitHandler: function() {
+				if (esEdicion) editar();
+				else crear();
+			}
+		});
+	}
+
+	validacionCliente('#formulario', false);
+	validacionCliente('#formularioEditar', true);
+
+	$('#guardar').on('click', function() {
+		$('#formulario').trigger('submit');
+	});
+	$('#editar').on('click', function() {
+		$('#formularioEditar').trigger('submit');
+	});
+
+	$('#modal, #modalEditar').on('hidden.bs.modal', function() {
+		var $formulario = $(this).find('form');
+		var validador = $formulario.data('validator');
+		if (validador) validador.resetForm();
+		$formulario[0].reset();
+		$formulario.find('.cliente-input-error, .cliente-input-success').removeClass('cliente-input-error cliente-input-success');
+		$formulario.find('.form-line').css('border-bottom', '');
+	});
+
+	$('#cedula, #cedulaEditar').on('input', function() {
+		this.value = this.value.replace(/[^0-9]/g, '').slice(0, 20);
+	});
 
 	$('#id_ciudad').change(function() {
 		var opcionSeleccionada = $(this).find('option:selected');
@@ -47,8 +179,6 @@ function listar(){
 	})
 	.done(function(data) {
 
-		console.log( data )
-
 		if ( data.success ) {
 
 			let html = '';
@@ -57,6 +187,7 @@ function listar(){
     html += `
       <tr>
         <td> ${val.id}</td>
+        <td> ${val.cedula}</td>
         <td> ${val.nombre}</td>
         <td> ${val.apellido}</td>
         <td> ${val.sexo}</td>
@@ -80,10 +211,12 @@ function listar(){
 	      $('#tablaclientes tbody').html(html);
 
 		} else {
-			console.log( data )
-			alert( data.msj )
+			toast('error', data.msj || 'Error al listar clientes');
 		}
 	})
+	.fail(function() {
+		toast('error', 'Error al cargar los clientes.');
+	});
 }
 
 
@@ -94,49 +227,23 @@ function listar(){
 //				Crear
 //--------------------------------------------------------------------------------------------------
 
-function validarDatosCliente(nombre, apellido, direccion) {
-	nombre = $.trim(nombre);
-	apellido = $.trim(apellido);
-	var patronNombre = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u;
-
-	if (!patronNombre.test(nombre)) {
-		alert('El nombre solo debe contener letras y espacios.');
-		return false;
-	}
-
-	if (!patronNombre.test(apellido)) {
-		alert('El apellido solo debe contener letras y espacios.');
-		return false;
-	}
-
-	if (Array.from(direccion).length > 100) {
-		alert('La dirección no debe exceder los 100 caracteres.');
-		return false;
-	}
-
-	return true;
-}
-
-$('#guardar').click(function() {
-	crear();
-})
-
 function crear(event) {
+	if (clienteGuardando) return;
+	var cedula = $.trim($('#cedula').val())
 	var nombre = $.trim($('#nombre').val())
 	var apellido = $.trim($('#apellido').val())
 	var sexo = $('#sexo').val()
 	var id_ciudad = $('#id_ciudad').val() 
 	var direccion = $('#direccion').val()
 
-	if (!validarDatosCliente(nombre, apellido, direccion)) {
-		return;
-	}
-	
+	clienteGuardando = true;
+	$('#guardar').prop('disabled', true).text('Guardando...');
 	$.ajax({
 		url: 'app/controllers/ClienteController.php',
 		type: 'POST',
 		dataType: 'json',
 		data: {action: 'crear',
+				cedula: cedula,
 				nombre: nombre,
 				apellido: apellido,
 				sexo: sexo,
@@ -150,23 +257,19 @@ function crear(event) {
 
 			listar();
 			$('#cerrar').click();
-			$('#nombre').val("");
-			$('#apellido').val("");
-			$('#sexo').val("");
-			$('#id_ciudad').val("").change();
-			$('#direccion').val("");
-			$('#fecha_creacion').val("");
-
-			alert( 'Su registro ha sido guardado con exito' )
+			toast('success', 'Cliente guardado correctamente');
 		} else {
-
-			alert( data.msj )
+			toast('error', data.msj || 'No se pudo guardar el cliente');
 		}
 	})
 	.fail(function(xhr) {
 		var respuesta = xhr.responseJSON || {};
-		alert(respuesta.msj || 'No se pudo guardar el cliente.');
+		toast('error', respuesta.msj || 'No se pudo guardar el cliente.');
 	})
+	.always(function() {
+		clienteGuardando = false;
+		$('#guardar').prop('disabled', false).text('Guardar');
+	});
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -182,44 +285,21 @@ function cargarCiudades() {
 		success: function(data) {
 			var opciones = '<option value="">Seleccione una ciudad</option>';
 			
-			if(data && data.length > 0) {
+			if(Array.isArray(data)) {
 				data.forEach(function(item) {
 					opciones += `<option value="${item.id_ciudad}" data-municipio="${item.municipio}" data-estado="${item.estado}">${item.nombre_ciudad}</option>`;
 				});
-				
 				$('#id_ciudad').html(opciones);
 				$('#id_ciudadEditar').html(opciones);
+			} else {
+				toast('error', 'No se pudieron cargar las ciudades.');
 			}
 		},
 		error: function() {
-			console.error("Error");
+			toast('error', 'No se pudieron cargar las ciudades.');
 		}
 	});
 }
-
-function cargarLineas(){
-	$.ajax({
-        url: 'app/controllers/ClienteController.php',
-        type: 'POST',
-        data: { action: 'cargarLineas' }, 
-        dataType: 'json',
-    })
-    .done(function(data) {
-        if (data.success) {
-            let options = '<option value="">-- Seleccione Línea --</option>';
-            
-            $.each(data.datos, function(index, val) {
-                options += `<option value="${val.id}">${val.nombre}</option>`;
-            });
-
-            
-        } else {
-            console.error("Error cargando líneas: " + data.msj);
-        }
-    });
-}
-
-
 
 // -------------------------------------------------------------------------------------------------
 //				Modificar
@@ -238,11 +318,10 @@ $("body").on("click","button.boton-update",function(){
 	})
 	.done(function(data) {
 
-		console.log( data.data.datos )
-
 		if (data.success == true) {
 
 			$('#idEditar').val( data.data.datos[0].id ) 
+			$('#cedulaEditar').val( data.data.datos[0].cedula || '' )
 			$('#nombreEditar').val( data.data.datos[0].nombre )
 			$('#apellidoEditar').val( data.data.datos[0].apellido )
 			$('#sexoEditar').val( data.data.datos[0].sexo )
@@ -254,34 +333,32 @@ $("body").on("click","button.boton-update",function(){
 
 		} else {
 
-			alert( data.msj )
+			toast('error', data.msj || 'Error al consultar el cliente');
 		}
-	})
-})
-
-
-$('#editar').click(function() {
-	editar();
+	}).fail(function() {
+		toast('error', 'Error al consultar el cliente.');
+	});
 })
 
 function editar() {
+	if (clienteEditando) return;
 	var id = $('#idEditar').val() 
+	var cedula = $.trim($('#cedulaEditar').val())
 	var nombre = $.trim($('#nombreEditar').val())
 	var apellido = $.trim($('#apellidoEditar').val())
 	var sexo = $('#sexoEditar').val()
 	var id_ciudad = $('#id_ciudadEditar').val()
 	var direccion = $('#direccionEditar').val()
 
-	if (!validarDatosCliente(nombre, apellido, direccion)) {
-		return;
-	}
-	
+	clienteEditando = true;
+	$('#editar').prop('disabled', true).text('Guardando...');
 	$.ajax({
 		url: 'app/controllers/ClienteController.php',
 		type: 'POST',
 		dataType: 'json',
 		data: {action: 'editar',
 				id:id,
+				cedula: cedula,
 				nombre: nombre,
 				apellido: apellido,
 				sexo: sexo,
@@ -295,18 +372,21 @@ function editar() {
 
 			listar();
 			$('#cerrarEditar').click();
-
-			alert( 'Su registro ha sido actualizado con exito' )
+			toast('success', 'Cliente actualizado correctamente')
 
 		} else {
 
-			alert( data.msj )
+			toast('error', data.msj || 'No se pudo actualizar el cliente')
 		}
 	})
 	.fail(function(xhr) {
 		var respuesta = xhr.responseJSON || {};
-		alert(respuesta.msj || 'No se pudo actualizar el cliente.');
+		toast('error', respuesta.msj || 'No se pudo actualizar el cliente.');
 	})
+	.always(function() {
+		clienteEditando = false;
+		$('#editar').prop('disabled', false).text('Editar');
+	});
 }
 // -------------------------------------------------------------------------------------------------
 //				Eliminar
@@ -316,15 +396,17 @@ $("body").on("click","button.boton-borrar",function(){
 
     var id = $(this).attr("id")
 
-	let resultado = confirm("¿Estás seguro de eliminar este usuario?");
-
-	if (resultado) {
-
-		eliminar(id)
-	} else {
-
-		alert("Operación cancelada.");
-	}
+	Swal.fire({
+		title: '¿Eliminar cliente?',
+		text: 'Esta acción no se puede deshacer.',
+		icon: 'warning',
+		showCancelButton: true,
+		confirmButtonText: 'Eliminar',
+		cancelButtonText: 'Cancelar',
+		confirmButtonColor: '#d33'
+	}).then(function(result) {
+		if (result.isConfirmed) eliminar(id);
+	});
 })
 
 function eliminar(id) {
@@ -342,10 +424,13 @@ function eliminar(id) {
 
 				listar();
 
-				alert( 'Usuario eliminado' )
+				toast('success', 'Cliente eliminado correctamente')
 			} else {
-
-				alert( data.msj )
+				toast('error', data.msj || 'No se pudo eliminar el cliente');
 			}
 	})
+	.fail(function(xhr) {
+		var respuesta = xhr.responseJSON || {};
+		toast('error', respuesta.msj || 'Error al eliminar el cliente.');
+	});
 }

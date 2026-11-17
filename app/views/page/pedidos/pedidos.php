@@ -101,7 +101,7 @@
                                 <div class="form-line">
                                     <input type="number" class="form-control" name="cantidad" id="cantidad" min="1" max="1000000" step="1" value="1">
                                 </div>
-                                
+
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -140,10 +140,11 @@
     </div>
 </div>
 
-<script src="resources/library/plugins/jquery/jquery.min.js"></script>
+
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.22.1/jquery.validate.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/toastjs-notifications@1.16.0/dist/toast-notifications.min.js"></script>
+
 <script src="public/js/validaciones.js"></script>
-<script src="public/js/pedidos.js?v=19"></script>
+<script src="public/js/pedidos.js?v=15"></script>
