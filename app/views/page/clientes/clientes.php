@@ -1,4 +1,18 @@
 <link rel="stylesheet" href="public/css/home.css">
+<!-- CSS de Bootstrap 5 y DataTables -->
+<link rel="stylesheet" href="resources/library/plugins/bootstrap/5.3.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="resources/library/plugins/jquery-datatable/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="resources/library/plugins/jquery-datatable/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<!-- Scripts JS -->
+<script src="resources/library/plugins/jquery-datatable/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<!-- Scripts para Botones de Exportación -->
+<script src="resources/library/plugins/jquery-datatable/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="resources/library/plugins/jquery-datatable/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="resources/library/plugins/jquery-datatable/dependencies/jszip/3.10.1/jszip.min.js"></script>
+<script src="resources/library/plugins/jquery-datatable/dependencies/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="resources/library/plugins/jquery-datatable/dependencies/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="resources/library/plugins/jquery-datatable/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="resources/library/plugins/jquery-datatable/buttons/2.4.2/js/buttons.print.min.js"></script>
 <style>
     .txt-error {
         display: none;
@@ -109,5 +123,5 @@
 </section>
 
 <?php include 'app/views/page/clientes/modal.php'; ?>
-<script src="public/js/cliente.js?v=7"></script> 
+<script src="public/js/cliente.js?v=8"></script>
 <script src="public/js/ubicacion.js"></script>

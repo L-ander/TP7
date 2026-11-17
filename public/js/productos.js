@@ -19,7 +19,7 @@ formularioProducto.validate({
         rules: {
             nombre: {
                 required: true,
-                maxlength: 40
+                maxlength: 255
             },
             id_linea: {
                 required: true
@@ -94,7 +94,7 @@ formularioProducto.validate({
         rules: {
             nombre: {
                 required: true,
-                maxlength: 40
+                maxlength: 255
             },
             id_linea: {
                 required: true
@@ -113,8 +113,7 @@ formularioProducto.validate({
         },
         messages: {
             nombre: {
-                required: 'El campo nombre del producto no puede estar vacío.' , 
-                maxlength: 'El nombre es demasiado largo.'
+                required: 'El campo nombre del producto no puede estar vacío.'
             },
             id_linea: {
                 required: 'Debe seleccionar una línea de producto.'
@@ -164,7 +163,8 @@ formularioProducto.validate({
         }
     });
 
-    $('#modalProducto').on('hidden.bs.modal', function() {
+
+     $('#modalProducto').on('hidden.bs.modal', function() {
         var formulario = $(this).find('form');
         var validador = formulario.data('validator');
 
@@ -310,8 +310,6 @@ function crear() {
     var presentacion = $('#presentacion').val();
     var id_medida = $('#id_medida').val();
     var precio = $('#precio').val().trim();
-
-   
 
 
     $.ajax({
@@ -529,4 +527,5 @@ function eliminar(id) {
         mostrarErrorProducto('Error al eliminar el producto.');
     });
 }
+
 

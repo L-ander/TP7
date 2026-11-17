@@ -13,6 +13,20 @@ function toast(icon, title) {
 var clienteGuardando = false;
 var clienteEditando = false;
 
+var miTabla = $('table#tablaCiudades').DataTable({ 
+        paging: true,        // Habilita la paginación 
+        searching: true,     // Activa la barra de búsqueda 
+        ordering: true,      // Permite ordenar columnas 
+        info: true,          // Muestra el texto de información de registros 
+        lengthMenu: [10, 25, 50, 100], // Opciones de cantidad de registros 
+        responsive: true,    // Diseño responsivo 
+         
+        language: { 
+            url: 'resources/library/plugins/jquery-datatable/1.13.6/i18n/es-ES.json'
+ 
+        } 
+    }); 
+
 $(document).ready(function(){
 	listar();
 	cargarCiudades();
@@ -22,6 +36,7 @@ $(document).ready(function(){
 			return this.optional(element) || /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u.test($.trim(value));
 		}, 'Use solo letras y espacios.');
 	}
+}); 
 
 	function validacionCliente(selector, esEdicion) {
 		$(selector).validate({
@@ -163,7 +178,7 @@ $(document).ready(function(){
 			$('#slots_geograficos_editar').slideUp(200);
 		}
 	});
-})
+
 
 // -------------------------------------------------------------------------------------------------
 //				listar
@@ -209,6 +224,13 @@ function listar(){
 });
 
 	      $('#tablaclientes tbody').html(html);
+		  $('#tablaclientes').DataTable({
+        dom: 'Blfrtip',
+        language: {
+            url: 'resources/library/plugins/jquery-datatable/1.13.6/i18n/es-ES.json'
+        },
+        buttons: ['copy', 'excel', 'pdf']
+    });
 
 		} else {
 			toast('error', data.msj || 'Error al listar clientes');
@@ -277,7 +299,36 @@ function crear(event) {
 //--------------------------------------------------------------------------------------------------
 
 function cargarCiudades() {
-	$.ajax({
+
+
+// let miTabla = $('#tablaCiudades').DataTable(); 
+ 
+$.ajax({ 
+    url: "app/controllers/ClienteController.php", 
+    type: "POST", 
+    data: { action: 'listarCiudades' },
+	dataType: "json",
+    success: function(respuestaServidor) { 
+
+        miTabla.clear(); // Limpiamos datos anteriores 
+         
+        respuestaServidor.forEach(function(clientes) { 
+
+			console.log( clientes.parroquia )
+            miTabla.row.add([ 
+                clientes.id_ciudad, 
+                clientes.nombre_ciudad, 
+                clientes.municipio, 
+                clientes.estado,
+				clientes.id_ciudad // Deben Ir los Botonces
+            ]); 
+        }); 
+         
+        miTabla.draw(); // Redibuja la tabla y recalcula la paginación 
+    } 
+}); 
+
+	/*$.ajax({
 		url: 'app/controllers/ClienteController.php',
 		type: 'POST',
 		data: { action: 'listarCiudades' },
@@ -291,6 +342,19 @@ function cargarCiudades() {
 				});
 				$('#id_ciudad').html(opciones);
 				$('#id_ciudadEditar').html(opciones);
+				 $('#tablaCiudades').DataTable({ 
+        paging: true,        // Habilita la paginación 
+        searching: true,     // Activa la barra de búsqueda 
+        ordering: true,      // Permite ordenar columnas 
+        info: true,          // Muestra el texto de información de registros 
+        lengthMenu: [10, 25, 50, 100], // Opciones de cantidad de registros 
+        responsive: true,    // Diseño responsivo 
+         
+        language: { 
+            url: 'resources/library/plugins/jquery-datatable/1.13.6/i18n/es-ES.json'
+ 
+        } 
+    }); 
 			} else {
 				toast('error', 'No se pudieron cargar las ciudades.');
 			}
@@ -299,7 +363,7 @@ function cargarCiudades() {
 			toast('error', 'No se pudieron cargar las ciudades.');
 		}
 	});
-}
+*/}
 
 // -------------------------------------------------------------------------------------------------
 //				Modificar
